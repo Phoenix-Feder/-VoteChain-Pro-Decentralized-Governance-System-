@@ -256,3 +256,12 @@ npx hardhat run scripts/deploy.js --network ganache
 This project is licensed under the MIT License.
 
 ---
+## 👥 Project Contributors
+
+VoteChain Pro was developed through collaborative contributions from the following team members:
+
+- Shubham Chakraborty  
+- Satish Mourya  
+- Swapnil Singh  
+
+All contributors were involved in various phases of system design, smart contract development, frontend integration, testing, and documentation.
