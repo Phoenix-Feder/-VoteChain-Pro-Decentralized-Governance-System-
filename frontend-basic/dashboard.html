@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoteChain Pro | Final Diagnostic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #6366f1; --bg: #0f172a; }
+        body { background: var(--bg); color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .page-view { display: none; }
+        .page-view.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .active-row { border-left: 4px solid var(--accent); background: rgba(99, 102, 241, 0.1); }
+        .nav-btn.active { background: var(--accent); color: white; }
+        .btn-loading { opacity: 0.7; pointer-events: none; cursor: wait; }
+    </style>
+</head>
+<body class="p-6">
+
+    <nav class="max-w-7xl mx-auto flex justify-between items-center mb-8 glass p-5 rounded-2xl">
+        <h1 class="text-xl font-black italic tracking-tighter">VOTECHAIN <span class="text-indigo-400">FINAL</span></h1>
+        <div class="flex gap-2 bg-slate-900/50 p-1 rounded-xl">
+            <button onclick="nav('dash')" id="nav-dash" class="nav-btn active px-4 py-2 rounded-lg text-xs font-bold">Dashboard</button>
+            <button onclick="nav('voter')" id="nav-voter" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-400">Voter</button>
+            <button onclick="nav('admin')" id="nav-admin" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-400">Admin</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <aside class="lg:col-span-4 space-y-6">
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="text-xs font-bold text-slate-500 uppercase mb-4">Election Registry</h3>
+                <div id="registryList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
+            </div>
+            
+            <div id="statusPanel" class="hidden glass p-6 rounded-2xl border-t-4 border-emerald-500">
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Live Status</p>
+                <div class="mt-2">
+                    <h4 id="statLeader" class="text-xl font-bold text-emerald-400">--</h4>
+                    <p id="statTimer" class="text-xs font-mono text-amber-500 mt-1">00:00:00</p>
+                </div>
+            </div>
+        </aside>
+
+        <div class="lg:col-span-8">
+            
+            <section id="page-dash" class="page-view active">
+                <div class="glass p-8 rounded-2xl h-[450px] flex flex-col">
+                    <h2 id="chartHeader" class="text-2xl font-bold mb-6">Results Overview</h2>
+                    <div class="flex-grow relative"><canvas id="resultsChart"></canvas></div>
+                </div>
+            </section>
+
+            <section id="page-voter" class="page-view">
+                <div class="glass p-10 rounded-2xl max-w-xl mx-auto space-y-6">
+                    <h2 class="text-2xl font-bold">Cast Ballot</h2>
+                    
+                    <div class="p-4 bg-slate-900 rounded-xl space-y-2 border border-slate-700">
+                        <div class="flex justify-between text-xs items-center">
+                            <span class="text-slate-500 font-bold uppercase">Your Address</span>
+                            <span id="vRegStatus" class="font-bold text-slate-600">--</span>
+                        </div>
+                        <input id="vWalletDisp" class="w-full bg-black/50 border border-slate-700 p-2 rounded text-xs font-mono text-indigo-400 text-center" readonly value="Waiting for key...">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Private Key</label>
+                        <input id="vKey" type="password" oninput="detectAddr()" placeholder="Paste Private Key Here" class="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-sm mt-1 focus:border-indigo-500 focus:outline-none transition-all">
+                    </div>
+
+                    <div id="candListVoter" class="p-4 bg-indigo-500/10 rounded-xl text-xs font-mono text-indigo-300">Select election to view candidates...</div>
+                    
+                    <div class="flex gap-3">
+                        <input id="vChoice" type="number" placeholder="ID" class="w-24 bg-slate-800 border border-slate-700 p-4 rounded-xl text-center font-bold">
+                        <button id="btnVote" onclick="castVote()" class="flex-1 bg-indigo-600 font-bold rounded-xl hover:bg-indigo-500 transition-all">SUBMIT VOTE</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-admin" class="page-view">
+                <div class="glass p-8 rounded-2xl space-y-6">
+                    <h3 class="text-lg font-bold">Admin Panel</h3>
+                    
+                    <div id="authBox">
+                        <input id="admKey" type="password" placeholder="Admin Private Key" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl mb-3">
+                        <button onclick="adminLogin()" class="w-full bg-white text-black font-bold py-3 rounded-xl">LOGIN</button>
+                    </div>
+
+                    <div id="adminTools" class="hidden space-y-8">
+                        <div class="space-y-4 border-b border-slate-700 pb-6">
+                            <h4 class="text-xs font-bold text-indigo-400 uppercase">Create Election</h4>
+                            <input id="newTitle" placeholder="Title" class="w-full bg-slate-800 p-3 rounded-xl">
+                            <div class="flex gap-2">
+                                <input id="newStart" type="date" class="flex-1 bg-slate-800 p-3 rounded-xl text-sm">
+                                <input id="newEnd" type="date" class="flex-1 bg-slate-800 p-3 rounded-xl text-sm">
+                            </div>
+                            <button id="btnDeploy" onclick="deployElection()" class="w-full bg-indigo-600 font-bold py-3 rounded-xl">DEPLOY</button>
+                        </div>
+
+                        <div id="mgmtBox" class="hidden space-y-4">
+                            <div class="flex justify-between">
+                                <h4 class="text-xs font-bold text-emerald-400 uppercase">Manage ID #<span id="mgmtId">--</span></h4>
+                                <button id="btnClose" onclick="closePolls()" class="text-[10px] bg-red-900 text-red-200 px-2 rounded">CLOSE</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <input id="candName" placeholder="Candidate Name" class="flex-1 bg-slate-800 p-3 rounded-xl">
+                                <button id="btnAdd" onclick="addCandidate()" class="bg-emerald-600 px-4 rounded-xl font-bold text-xs">ADD</button>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex gap-2">
+                                    <input id="voterAddr" placeholder="Voter Address (0x...)" class="flex-1 bg-slate-800 p-3 rounded-xl">
+                                    <button id="btnReg" onclick="whitelistVoter()" class="bg-white text-black px-4 rounded-xl font-bold text-xs">REGISTER</button>
+                                </div>
+                                <div id="voterListLog" class="h-20 overflow-y-auto bg-black/30 p-2 rounded text-[10px] font-mono text-slate-400"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="logs" class="fixed bottom-5 right-5 w-80 h-40 glass p-4 rounded-xl text-[10px] font-mono text-emerald-400 overflow-y-auto shadow-2xl border border-slate-700">
+        > System Ready...
+    </div>
+
+    <script>
+        const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:7545");
+        const CONTRACT_ADDRESS = "0x3bE192EBE5a56BFcA2Ea7c6926Ea255e88FE5B7E"; // CHECK THIS
+        const ADMIN_ADDRESS = "0xC92dD829502E98df4014676836f97aeFcdEc25E3"; // CHECK THIS
+        
+        const ABI = [
+            "function elections(uint256) view returns (string,uint256,uint256,bool)",
+            "function createElection(string,uint256,uint256)",
+            "function deleteElection(uint256)",
+            "function addCandidate(uint256,string)",
+            "function registerVoter(uint256,address)",
+            "function vote(uint256,uint256)",
+            "function getElections() view returns (uint256[],string[])",
+            "function getCandidates(uint256) view returns (tuple(uint256 id,string name,uint256 voteCount)[])",
+            "function getRegisteredVoters(uint256) view returns (address[])", 
+            "function voters(uint256,address) view returns (bool,bool)"
+        ];
+
+        let contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        let adminWallet = null;
+        let selectedId = null;
+        let chart = null;
+
+        function nav(p) {
+            document.querySelectorAll('.page-view').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active', 'text-white'));
+            document.getElementById(`page-${p}`).classList.add('active');
+            document.getElementById(`nav-${p}`).classList.add('active', 'text-white');
+        }
+
+        async function init() {
+            await refreshRegistry();
+            setInterval(refreshRegistry, 5000);
+            
+            const today = new Date().toISOString().split('T')[0];
+            const tmrw = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
+            document.getElementById('newStart').value = today;
+            document.getElementById('newEnd').value = tmrw;
+        }
+
+        async function refreshRegistry() {
+            try {
+                const [ids, names] = await contract.getElections();
+                const list = document.getElementById('registryList');
+                list.innerHTML = "";
+                
+                for(let i=0; i<ids.length; i++) {
+                    const id = ids[i].toNumber();
+                    const info = await contract.elections(id);
+                    const now = Math.floor(Date.now()/1000);
+                    const isActive = info[3] && (now <= Number(info[2]));
+                    
+                    const div = document.createElement('div');
+                    div.className = `p-3 rounded-lg cursor-pointer hover:bg-slate-800 flex justify-between items-center ${selectedId === id ? 'active-row' : ''}`;
+                    div.innerHTML = `
+                        <div><span class="text-[10px] font-mono text-indigo-400">#${id}</span> <span class="font-bold text-sm ml-2">${names[i]}</span></div>
+                        <span class="text-[10px] font-bold ${isActive ? 'text-emerald-400' : 'text-red-500'}">${isActive ? 'LIVE' : 'CLOSED'}</span>
+                    `;
+                    div.onclick = () => selectElection(id, names[i]);
+                    list.appendChild(div);
+                }
+            } catch(e) { log("❌ Sync Error"); }
+        }
+
+        async function selectElection(id, name) {
+            selectedId = id;
+            document.getElementById('chartHeader').innerText = name;
+            document.getElementById('statusPanel').classList.remove('hidden');
+            if(adminWallet) {
+                document.getElementById('mgmtBox').classList.remove('hidden');
+                document.getElementById('mgmtId').innerText = id;
+                loadVoters(id);
+            }
+
+            const candidates = await contract.getCandidates(id);
+            const info = await contract.elections(id);
+            
+            document.getElementById('candListVoter').innerHTML = candidates.length 
+                ? candidates.map(c => `ID [${c.id}]: ${c.name}`).join("<br>") 
+                : "No candidates available.";
+
+            updateChart(candidates);
+            detectAddr(); // Update voter diagnostic
+
+            const end = Number(info[2]);
+            const now = Math.floor(Date.now()/1000);
+            const isActive = info[3] && (now <= end);
+            document.getElementById('statTimer').innerText = isActive ? "Voting Open" : "Polls Closed";
+            
+            if(candidates.length > 0) {
+                const max = Math.max(...candidates.map(c => Number(c.voteCount)));
+                const winners = candidates.filter(c => Number(c.voteCount) === max);
+                document.getElementById('statLeader').innerText = max===0 ? "No Votes" : winners[0].name;
+            }
+        }
+
+        // --- ADMIN ---
+        async function adminLogin() {
+            let k = document.getElementById('admKey').value.trim();
+            if(!k.startsWith('0x')) k = '0x'+k;
+            try {
+                const w = new ethers.Wallet(k, provider);
+                if(w.address.toLowerCase() !== ADMIN_ADDRESS.toLowerCase()) return log("❌ Not Admin Address");
+                adminWallet = w;
+                document.getElementById('authBox').classList.add('hidden');
+                document.getElementById('adminTools').classList.remove('hidden');
+                log("✅ Admin Logged In");
+            } catch(e) { log("❌ Key Error"); }
+        }
+
+        async function deployElection() {
+            const title = document.getElementById('newTitle').value;
+            const sDate = new Date(document.getElementById('newStart').value); sDate.setHours(0,0,0,0);
+            const start = Math.floor(sDate.getTime()/1000);
+            const eDate = new Date(document.getElementById('newEnd').value); eDate.setHours(23,59,59,999);
+            const end = Math.floor(eDate.getTime()/1000);
+            
+            log(`> Deploying: ${title}...`);
+            const btn = document.getElementById('btnDeploy'); btn.classList.add('btn-loading');
+            try {
+                const tx = await contract.connect(adminWallet).createElection(title, start, end, { gasLimit: 3000000 });
+                await tx.wait();
+                log("✅ Election Created"); refreshRegistry();
+            } catch(e) { log("❌ Failed"); } finally { btn.classList.remove('btn-loading'); }
+        }
+
+        async function addCandidate() {
+            const name = document.getElementById('candName').value;
+            const btn = document.getElementById('btnAdd'); btn.classList.add('btn-loading');
+            try {
+                const tx = await contract.connect(adminWallet).addCandidate(selectedId, name, { gasLimit: 500000 });
+                await tx.wait();
+                log("✅ Candidate Added"); selectElection(selectedId, document.getElementById('chartHeader').innerText);
+            } catch(e) { log("❌ Failed"); } finally { btn.classList.remove('btn-loading'); }
+        }
+
+        async function whitelistVoter() {
+            const addr = document.getElementById('voterAddr').value.trim();
+            if(!ethers.utils.isAddress(addr)) return log("⚠️ Invalid Address");
+            const btn = document.getElementById('btnReg'); btn.classList.add('btn-loading');
+            try {
+                const tx = await contract.connect(adminWallet).registerVoter(selectedId, addr, { gasLimit: 500000 });
+                await tx.wait();
+                log("✅ Registered!"); loadVoters(selectedId);
+            } catch(e) { log("❌ Failed (Already Registered?)"); } finally { btn.classList.remove('btn-loading'); }
+        }
+
+        async function loadVoters(id) {
+            try {
+                const voters = await contract.getRegisteredVoters(id);
+                document.getElementById('voterListLog').innerText = voters.join("\n") || "No voters yet.";
+            } catch(e) {}
+        }
+
+        async function closePolls() {
+            const btn = document.getElementById('btnClose'); btn.classList.add('btn-loading');
+            try {
+                await (await contract.connect(adminWallet).deleteElection(selectedId)).wait();
+                log("✅ Closed"); refreshRegistry();
+            } catch(e) { log("❌ Failed"); } finally { btn.classList.remove('btn-loading'); }
+        }
+
+        // --- VOTER ---
+        async function detectAddr() {
+            try {
+                let k = document.getElementById('vKey').value.trim();
+                // Ensure prefix handles copied keys correctly
+                if(!k.startsWith('0x')) k = '0x'+k;
+                
+                // Only try detecting if length is plausible (66 chars including 0x)
+                if(k.length < 64) throw new Error(); 
+                
+                const w = new ethers.Wallet(k);
+                // SHOW FULL ADDRESS for verification
+                document.getElementById('vWalletDisp').value = w.address; 
+                
+                if(selectedId) {
+                    const status = await contract.voters(selectedId, w.address);
+                    const el = document.getElementById('vRegStatus');
+                    if(status[1]) { el.innerText = "ALREADY VOTED"; el.className = "font-bold text-red-500"; }
+                    else if(status[0]) { el.innerText = "ELIGIBLE ✅"; el.className = "font-bold text-emerald-400"; }
+                    else { el.innerText = "NOT REGISTERED ⚠️"; el.className = "font-bold text-amber-500"; }
+                }
+            } catch(e) { 
+                document.getElementById('vWalletDisp').value = "Waiting for key..."; 
+                document.getElementById('vRegStatus').innerText = "--";
+            }
+        }
+
+        async function castVote() {
+            if(!selectedId) return log("⚠️ Select Election");
+            let k = document.getElementById('vKey').value.trim();
+            if(!k.startsWith('0x')) k = '0x'+k;
+            const cid = document.getElementById('vChoice').value;
+            
+            const btn = document.getElementById('btnVote'); btn.classList.add('btn-loading');
+            try {
+                const w = new ethers.Wallet(k, provider);
+                log("> Validating...");
+                
+                // DOUBLE CHECK STATE BEFORE SENDING
+                const info = await contract.elections(selectedId);
+                const status = await contract.voters(selectedId, w.address);
+                const now = Math.floor(Date.now()/1000);
+
+                if(now > info[2] || !info[3]) throw new Error("Polls Closed");
+                if(!status[0]) throw new Error("Not Whitelisted");
+                if(status[1]) throw new Error("Already Voted");
+
+                const tx = await contract.connect(w).vote(selectedId, cid, { gasLimit: 500000 });
+                await tx.wait();
+                log("✅ VOTE SUCCESSFUL!");
+                selectElection(selectedId, "");
+            } catch(e) { 
+                log(`❌ Error: ${e.message || "Reverted"}`); 
+            } finally { btn.classList.remove('btn-loading'); }
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(c => c.name),
+                    datasets: [{
+                        data: data.map(c => Number(c.voteCount)),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+        function log(m) { 
+            const el = document.getElementById('logs'); 
+            el.innerHTML += `<div>${m}</div>`; 
+            el.scrollTop = el.scrollHeight; 
+        }
+
+        init();
+    </script>
+</body>
+</html>

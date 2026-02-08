@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel – Blockchain Voting</title>
+
+  <!-- ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <!-- ✅ CSS (DO NOT CHANGE PATH) -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>Admin Control Panel</h1>
+
+  <!-- ADMIN LOGIN -->
+  <div class="card">
+    <h2>Admin Authentication</h2>
+
+    <label>Admin Private Key</label>
+    <input
+      id="adminPrivateKey"
+      type="password"
+      placeholder="Enter admin private key"
+    >
+
+    <button onclick="adminLogin()">Login as Admin</button>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div class="card" id="adminPanel" style="display:none;">
+
+    <h2>Create Election</h2>
+
+    <label>Election Name</label>
+    <input id="electionName">
+
+    <!-- DATE ONLY (NO TIME) -->
+    <label>Start Date</label>
+    <input id="startTime" type="date">
+
+    <label>End Date</label>
+    <input id="endTime" type="date">
+
+    <button onclick="createElection()">Create Election</button>
+
+    <hr>
+
+    <h2>Manage Election</h2>
+
+    <label>Election ID</label>
+    <input id="electionId">
+
+    <label>Candidate Name</label>
+    <input id="candidateName">
+    <button onclick="addCandidate()">Add Candidate</button>
+
+    <label>Register Voter (Address)</label>
+    <input id="voterAddress">
+    <button onclick="registerVoter()">Register Voter</button>
+
+    <button class="danger" onclick="deleteElection()">Delete Election</button>
+
+    <hr>
+
+    <h2>View Data</h2>
+    <button onclick="loadElections()">Show Elections</button>
+    <button onclick="showCandidates()">Show Candidates</button>
+    <button onclick="showVoters()">Show Registered Voters</button>
+  </div>
+
+  <pre id="output">Waiting…</pre>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
