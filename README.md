@@ -1,6 +1,4 @@
-Understood 👍
-Below is **pure plain text** (no UI formatting tricks).
-You can **select → copy → paste directly into `README.md`** without issues.
+
 
 ---
 
