@@ -166,6 +166,62 @@ JavaScript
 const CONTRACT_ADDRESS = "0x3bE192..."; // Paste new address here
 Launch the app using Live Server.
 
+
+
+# 🍫 Ganache Local Blockchain Guide
+
+**Ganache** is a personal blockchain for Ethereum development. It allows you to deploy contracts, develop applications, and run tests in a safe, deterministic environment. It simulates the Ethereum network behavior on your local machine without the cost of real Ether.
+
+---
+
+## 1. Accounts 🔑
+
+Upon launch, Ganache provides **10 pre-funded accounts** to simulate different users interacting with the blockchain.
+
+* **Balance:** Each account comes with **100 ETH** (fake test ether) by default.
+* **Private Keys:** Every account has a corresponding private key visible in the UI or CLI. You will need these to import accounts into wallets like **MetaMask**.
+* **Mnemonic:** A unique 12-word seed phrase is generated at start. You can use this to restore the exact same addresses in future sessions.
+
+![Ganache Accounts Tab: Showing list of 10 addresses with 100 ETH balance and the Mnemonic phrase at the top]![ganache accounts](image-3.png)
+
+---
+
+## 2. Blocks 📦
+
+Ganache manages block mining differently than the mainnet to speed up development.
+
+* **Automine (Default):** Ganache is usually set to "Automine," meaning a block is mined **instantly** whenever a transaction is sent.
+* **Interval Mining:** You can configure Ganache to mine blocks at a set time interval (e.g., every 15 seconds) to simulate real-world network latency.
+* **Block Inspection:** You can click on any block number to see Gas Used vs. Gas Limit, the Timestamp, and the transactions included in that block.
+
+![Ganache Blocks Tab: Displaying a list of mined blocks with block numbers and timestamps]![Blockchain blocks](image-4.png)
+
+---
+
+## 3. Transactions (TX) 💸
+
+The Transactions tab tracks every interaction with the blockchain, including contract deployments and function calls.
+
+* **TX Hash:** The unique ID for the transaction. Useful for looking up specific interactions in your code or tests.
+* **Contract Creation:** Special transactions that deploy your smart contracts. The "To" address will be the address of your new contract.
+* **Data/Input:** Shows the hex data sent with the transaction (the function being called and arguments passed).
+* **Status:** Quickly see if a transaction `CONFIRMED` (green) or `REVERTED` (red) due to an error.
+
+![Ganache Transactions Tab: A log of transaction hashes, sender addresses, and contract creation events]![Transactions on blockchain](image-5.png)
+
+---
+
+## 4. Logs & Events 📜
+
+Logs are the primary tool for debugging smart contract logic.
+
+* **System Logs:** The console shows server logs (HTTP requests like `eth_sendTransaction`, `eth_getBlockByNumber`).
+* **Solidity Events:** When your contract emits an event (e.g., `emit Transfer(...)`), the data is stored in the transaction receipt logs.
+* **Debugging:** Errors such as "Out of Gas" or "Revert" will appear here with detailed reasons.
+
+![Ganache Logs: Terminal output showing JSON-RPC requests and event logs]![Logs](image-6.png)
+
+
 # 📖 Usage Manual
 # 🏛️ Administrator Workflow
 Login: Use the Private Key of Account #0 from Ganache (The Owner).
